@@ -51,25 +51,55 @@ const Editor = () => {
     );
   };
 
-  const handleGenerate = () => {
+  const [error, setError] = useState("");
+  const [progress, setProgress] = useState(0);
+
+  const handleGenerate = async () => {
     setGenerating(true);
+    setError("");
+    setProgress(0);
+
     const panelCount = layouts[layout].cols * layouts[layout].rows;
-    setTimeout(() => {
+    const fakeProgressInterval = setInterval(() => {
+      setProgress((prev) => Math.min(prev + Math.random() * 8, 90));
+    }, 500);
+
+    try {
+      const resp = await fetch("https://functions.poehali.dev/9923ee9a-8edb-44cc-8484-117e4950e5a3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: currentPage?.prompt || "",
+          style,
+          panelCount,
+        }),
+      });
+
+      const data = await resp.json();
+      clearInterval(fakeProgressInterval);
+
+      if (!resp.ok) {
+        setError(data.error || "Ошибка генерации");
+        setGenerating(false);
+        setProgress(0);
+        return;
+      }
+
+      setProgress(100);
       setPages((prev) =>
         prev.map((p, i) =>
           i === activePage
-            ? {
-                ...p,
-                generated: true,
-                panels: Array.from({ length: panelCount }, (_, j) =>
-                  `https://placehold.co/400x400/1a1a2e/a855f7?text=Панель+${j + 1}`
-                ),
-              }
+            ? { ...p, generated: true, panels: data.panels.filter(Boolean) }
             : p
         )
       );
+    } catch (e) {
+      clearInterval(fakeProgressInterval);
+      setError("Не удалось подключиться к серверу генерации");
+    } finally {
       setGenerating(false);
-    }, 2000);
+      setTimeout(() => setProgress(0), 1000);
+    }
   };
 
   const currentPage = pages[activePage];
@@ -217,6 +247,20 @@ const Editor = () => {
                     value={currentPage?.prompt || ""}
                     onChange={(e) => updatePrompt(e.target.value)}
                   />
+                  {generating && (
+                    <div className="w-full bg-accent rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  )}
+                  {error && (
+                    <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg p-3">
+                      <Icon name="AlertCircle" size={16} />
+                      {error}
+                    </div>
+                  )}
                   <Button
                     className="w-full gap-2 glow-purple"
                     onClick={handleGenerate}
@@ -225,7 +269,7 @@ const Editor = () => {
                     {generating ? (
                       <>
                         <Icon name="Loader2" size={18} className="animate-spin" />
-                        Генерация...
+                        Генерация... {Math.round(progress)}%
                       </>
                     ) : (
                       <>
