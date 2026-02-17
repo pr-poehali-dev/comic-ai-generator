@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Icon from "@/components/ui/icon";
+import { saveComic, isAuthenticated } from "@/lib/api";
 
 const artStyles = [
   "Манга", "Супергерои", "Европейский", "Нуар", "Киберпанк",
@@ -86,13 +87,24 @@ const Editor = () => {
       }
 
       setProgress(100);
+      const generatedPanels = data.panels.filter(Boolean);
       setPages((prev) =>
         prev.map((p, i) =>
           i === activePage
-            ? { ...p, generated: true, panels: data.panels.filter(Boolean) }
+            ? { ...p, generated: true, panels: generatedPanels }
             : p
         )
       );
+
+      if (isAuthenticated()) {
+        const title = (currentPage?.prompt || "Без названия").slice(0, 60);
+        saveComic({
+          title,
+          prompt: currentPage?.prompt || "",
+          style,
+          panels: generatedPanels,
+        }).catch(() => {});
+      }
     } catch (e) {
       clearInterval(fakeProgressInterval);
       setError("Не удалось подключиться к серверу генерации");

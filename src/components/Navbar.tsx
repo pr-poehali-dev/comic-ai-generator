@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
+import { useAuth } from "@/components/AuthContext";
 
 const navItems = [
   { path: "/", label: "Главная", icon: "Home" },
@@ -15,6 +16,7 @@ const navItems = [
 const Navbar = () => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { user, isLoggedIn } = useAuth();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
@@ -56,10 +58,19 @@ const Navbar = () => {
             <Icon name={theme === "dark" ? "Sun" : "Moon"} size={18} />
           </Button>
           <Link to="/profile">
-            <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
-              <Icon name="LogIn" size={16} />
-              Войти
-            </Button>
+            {isLoggedIn ? (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
+                  {user?.name?.[0]?.toUpperCase() || "?"}
+                </div>
+                <span className="text-sm font-medium">{user?.name}</span>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
+                <Icon name="LogIn" size={16} />
+                Войти
+              </Button>
+            )}
           </Link>
         </div>
       </div>
